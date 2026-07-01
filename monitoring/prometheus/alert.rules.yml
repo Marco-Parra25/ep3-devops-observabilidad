@@ -1,0 +1,35 @@
+# Reglas de alerta: permiten DETECTAR ANOMALÍAS automáticamente (IE1).
+groups:
+  - name: observability-service-alertas
+    rules:
+      # Alerta si el servicio deja de responder (indisponibilidad).
+      - alert: ServicioCaido
+        expr: up{job="observability-service"} == 0
+        for: 30s
+        labels:
+          severity: critica
+        annotations:
+          summary: "El microservicio está caído"
+          description: "Prometheus no puede scrapear el microservicio hace más de 30s."
+
+      # Alerta si la tasa de errores HTTP 5xx supera el umbral.
+      - alert: TasaErrores5xxAlta
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[1m])) > 0.5
+        for: 1m
+        labels:
+          severity: alta
+        annotations:
+          summary: "Tasa alta de errores 5xx"
+          description: "El microservicio está devolviendo demasiados errores de servidor."
+
+      # Alerta si el uso de memoria del heap supera el 85%.
+      - alert: MemoriaAlta
+        expr: |
+          (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.85
+        for: 2m
+        labels:
+          severity: media
+        annotations:
+          summary: "Uso de memoria elevado"
+          description: "El heap de la JVM supera el 85% de su capacidad."

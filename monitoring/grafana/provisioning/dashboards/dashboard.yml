@@ -1,0 +1,12 @@
+# Provisioning: le dice a Grafana que cargue los dashboards de la carpeta.
+apiVersion: 1
+
+providers:
+  - name: 'EP3 Dashboards'
+    orgId: 1
+    folder: 'Observabilidad EP3'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

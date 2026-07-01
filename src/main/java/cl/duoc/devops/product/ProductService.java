@@ -26,10 +26,12 @@ public class ProductService {
     private final Counter productNotFoundCounter;
 
     public ProductService(MeterRegistry registry) {
-        this.productsCreatedCounter = Counter.builder("products_created_total")
+        // "created" es palabra reservada en Prometheus (se usa para _created timestamps),
+        // por eso usamos "products_registered". Micrometer agrega el sufijo "_total".
+        this.productsCreatedCounter = Counter.builder("products_registered")
                 .description("Cantidad total de productos creados")
                 .register(registry);
-        this.productNotFoundCounter = Counter.builder("products_not_found_total")
+        this.productNotFoundCounter = Counter.builder("products_not_found")
                 .description("Cantidad de búsquedas de productos inexistentes")
                 .register(registry);
 

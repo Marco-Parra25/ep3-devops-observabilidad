@@ -1,0 +1,38 @@
+# Stack de observabilidad local: Prometheus + Pushgateway + Grafana.
+# Uso:  cd monitoring && docker compose up -d
+# El microservicio debe correr aparte en el puerto 8080 (mvn spring-boot:run).
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: ep3-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # permite scrapear el host (Linux)
+
+  pushgateway:
+    # Recibe métricas del pipeline CI/CD (cobertura, tiempo de despliegue).
+    image: prom/pushgateway:v1.10.0
+    container_name: ep3-pushgateway
+    ports:
+      - "9091:9091"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: ep3-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus

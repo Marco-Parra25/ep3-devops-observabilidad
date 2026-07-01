@@ -1,0 +1,31 @@
+# Configuración de Prometheus.
+# Define cada cuánto recolecta métricas (scrape) y de dónde.
+global:
+  scrape_interval: 10s          # recolecta métricas cada 10 segundos
+  evaluation_interval: 10s
+
+# Reglas de alertas (usadas para detectar anomalías - IE1).
+rule_files:
+  - "alert.rules.yml"
+
+scrape_configs:
+  # El propio Prometheus (auto-monitoreo).
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Nuestro microservicio Spring Boot.
+  # 'host.docker.internal' apunta al host desde dentro del contenedor (Docker Desktop).
+  - job_name: "observability-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels:
+          application: "observability-service"
+          entorno: "local"
+
+  # Pushgateway: métricas empujadas por el pipeline CI/CD (cobertura, tiempo de despliegue).
+  - job_name: "pushgateway"
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
