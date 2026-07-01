@@ -1,0 +1,25 @@
+# Configuración del cluster EKS para AWS Academy Learner Lab.
+# Reutiliza el rol preexistente LabRole (Learner Lab no permite crear roles IAM).
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: ep3-cluster
+  region: us-east-1
+
+iam:
+  # Rol de servicio del plano de control del cluster (existente).
+  serviceRoleARN: arn:aws:iam::654654493647:role/LabRole
+  # Learner Lab no permite crear el proveedor OIDC.
+  withOIDC: false
+
+managedNodeGroups:
+  - name: ng-ep3
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 3
+    volumeSize: 20
+    iam:
+      # Rol de los nodos worker (existente).
+      instanceRoleARN: arn:aws:iam::654654493647:role/LabRole

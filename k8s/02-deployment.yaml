@@ -23,10 +23,13 @@ spec:
     spec:
       containers:
         - name: observability-service
-          # IMPORTANTE: reemplazar por tu imagen publicada (Docker Hub / ECR).
-          image: IMAGE_PLACEHOLDER
+          # Imagen publicada en Amazon ECR (misma cuenta del cluster).
+          image: 654654493647.dkr.ecr.us-east-1.amazonaws.com/ep3-observability:latest
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           # Límites de recursos: necesarios para medir uso de CPU/memoria (IE3)
           # y para que Kubernetes proteja el nodo.
           resources:
@@ -52,8 +55,13 @@ spec:
           # Endurecimiento de seguridad del contenedor (cumplimiento - IE5).
           securityContext:
             runAsNonRoot: true
+            runAsUser: 1001
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+      # Volumen temporal escribible para la JVM/Tomcat (root filesystem es de solo lectura).
+      volumes:
+        - name: tmp
+          emptyDir: {}
