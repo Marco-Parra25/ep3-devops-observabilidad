@@ -1,0 +1,23 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Secretos (nunca subir credenciales)
+*.env
+.env
+**/secrets.yaml
+aws-credentials*

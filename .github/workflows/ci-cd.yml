@@ -1,0 +1,119 @@
+name: CI/CD Pipeline - Observabilidad EP3
+
+# Se ejecuta en cada push y en cada Pull Request hacia main.
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Permisos mínimos (principio de menor privilegio - cumplimiento IE5).
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ============================================================
+  # JOB 1: Build + Tests + Cobertura
+  # Si los tests fallan o la cobertura baja del 70%, el pipeline
+  # se DETIENE aquí y no continúa al despliegue (IE6).
+  # ============================================================
+  build-test:
+    name: Build, Test y Cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historial completo, necesario para SonarQube
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compilar y ejecutar pruebas con cobertura (quality gate JaCoCo)
+        # 'verify' incluye la regla de JaCoCo: si la cobertura < 70%, falla -> pipeline detenido (IE6).
+        run: mvn -B clean verify
+
+      - name: Publicar reporte de cobertura como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+
+  # ============================================================
+  # JOB 2: Análisis de calidad y seguridad
+  # ============================================================
+  quality-gate:
+    name: SonarQube + Seguridad
+    runs-on: ubuntu-latest
+    needs: build-test           # solo corre si build-test pasó
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Análisis con SonarQube / SonarCloud (IE5)
+        # Requiere los secretos SONAR_TOKEN y SONAR_HOST_URL configurados en GitHub.
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::warning:: SONAR_TOKEN no configurado; se omite el análisis Sonar."
+            exit 0
+          fi
+          mvn -B verify sonar:sonar \
+            -Dsonar.projectKey=observability-service-ep3 \
+            -Dsonar.host.url="$SONAR_HOST_URL" \
+            -Dsonar.token="$SONAR_TOKEN"
+
+      - name: Escaneo de vulnerabilidades del sistema de archivos (Trivy)
+        # Detiene el pipeline si hay vulnerabilidades CRÍTICAS o ALTAS (IE6).
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: '1'          # <-- rompe el pipeline ante hallazgos críticos
+          ignore-unfixed: true
+
+  # ============================================================
+  # JOB 3: Build y push de la imagen Docker
+  # Solo se ejecuta en push a main y si TODO lo anterior pasó.
+  # ============================================================
+  docker-build:
+    name: Construir y publicar imagen
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Login a Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build y push de la imagen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/observability-service:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/observability-service:${{ github.sha }}

@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: observability-service
+
+server:
+  port: 8080
+
+# --- Observabilidad (IE1) ---
+# Actuator expone endpoints de salud y métricas; Prometheus scrapea /actuator/prometheus.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true          # habilita liveness/readiness para Kubernetes (IE2)
+      show-details: always
+  metrics:
+    tags:
+      application: observability-service   # etiqueta común para todas las métricas
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+# Información expuesta en /actuator/info
+info:
+  app:
+    name: Observability Service
+    description: Microservicio DevOps EP3 DOY0101
+    version: 1.0.0
+
+# Logging estructurado para facilitar el análisis de logs (IE1)
+logging:
+  level:
+    cl.duoc.devops: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: observability-service
+  namespace: devops-ep3
+  labels:
+    app: observability-service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "8080"
+spec:
+  # En EKS, LoadBalancer expone la app con una URL pública (AWS ELB).
+  # En Minikube usa "minikube service" o cambia a NodePort.
+  type: LoadBalancer
+  selector:
+    app: observability-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
