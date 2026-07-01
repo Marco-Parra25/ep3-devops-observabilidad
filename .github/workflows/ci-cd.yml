@@ -66,19 +66,21 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Análisis con SonarQube / SonarCloud (IE5)
-        # Requiere los secretos SONAR_TOKEN y SONAR_HOST_URL configurados en GitHub.
+      - name: Análisis de calidad con SonarCloud (IE5)
+        # Requiere el secreto SONAR_TOKEN configurado en GitHub.
+        # 'sonar.qualitygate.wait=true' DETIENE el pipeline si el Quality Gate falla (IE6).
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           if [ -z "$SONAR_TOKEN" ]; then
             echo "::warning:: SONAR_TOKEN no configurado; se omite el análisis Sonar."
             exit 0
           fi
           mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=observability-service-ep3 \
-            -Dsonar.host.url="$SONAR_HOST_URL" \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=marco-parra25 \
+            -Dsonar.projectKey=Marco-Parra25_ep3-devops-observabilidad \
+            -Dsonar.qualitygate.wait=true \
             -Dsonar.token="$SONAR_TOKEN"
 
       - name: Escaneo de vulnerabilidades del sistema de archivos (Trivy)
