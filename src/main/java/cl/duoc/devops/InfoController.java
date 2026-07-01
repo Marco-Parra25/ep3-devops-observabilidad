@@ -16,7 +16,7 @@ import java.util.Map;
 public class InfoController {
 
     // 👇 Cambia este valor para demostrar un despliegue en el video.
-    private static final String APP_VERSION = "2.0.0";
+    private static final String APP_VERSION = "1.0.0";
 
     @GetMapping("/version")
     public Map<String, String> version() {
