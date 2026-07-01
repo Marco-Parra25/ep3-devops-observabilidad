@@ -82,7 +82,7 @@ jobs:
 
       - name: Escaneo de vulnerabilidades del sistema de archivos (Trivy)
         # Detiene el pipeline si hay vulnerabilidades CRÍTICAS o ALTAS (IE6).
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: fs
           scan-ref: .
