@@ -16,9 +16,9 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Usuario no-root: buena práctica de seguridad exigida por políticas de cumplimiento.
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
+# Usuario no-root con UID fijo 1001 (coincide con runAsUser del despliegue en K8s).
+RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
+USER 1001
 
 COPY --from=build /app/target/observability-service-*.jar app.jar
 

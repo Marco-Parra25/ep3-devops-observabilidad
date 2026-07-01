@@ -71,34 +71,47 @@ jobs:
           ignore-unfixed: true
 
   # ============================================================
-  # JOB 3: Build y push de la imagen Docker
-  # Solo se ejecuta en push a main y si TODO lo anterior pasó.
+  # JOB 3: Despliegue automático (CD) en AWS EKS
+  # Solo se ejecuta al fusionar a main y si TODO lo anterior pasó.
+  # Construye la imagen, la publica en Amazon ECR y actualiza el
+  # despliegue en el cluster EKS de forma automática.
   # ============================================================
-  docker-build:
-    name: Construir y publicar imagen
+  deploy-eks:
+    name: Desplegar en AWS EKS
     runs-on: ubuntu-latest
     needs: security-scan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
-      REGISTRY: ghcr.io
-      # GHCR exige minúsculas en la ruta de la imagen.
-      IMAGE_NAME: marco-parra25/ep3-devops-observabilidad
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      AWS_REGION: us-east-1
+      ACCOUNT_ID: "654654493647"
+      CLUSTER: ep3-cluster
+      ECR_REPO: ep3-observability
+      NAMESPACE: devops-ep3
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Login a GitHub Container Registry (GHCR)
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}   # token automático, sin configurar nada
+      - name: Login a Amazon ECR
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-      - name: Build y push de la imagen
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Construir y publicar la imagen en ECR
+        run: |
+          IMAGE="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO"
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+      - name: Desplegar en el cluster EKS
+        run: |
+          aws eks update-kubeconfig --name "$CLUSTER" --region "$AWS_REGION"
+          IMAGE="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO"
+          kubectl set image deployment/observability-service \
+            observability-service="$IMAGE:${{ github.sha }}" -n "$NAMESPACE"
+          kubectl rollout status deployment/observability-service -n "$NAMESPACE" --timeout=180s
+          echo "Despliegue automático completado ✅"
+          kubectl get pods -n "$NAMESPACE" -l app=observability-service
