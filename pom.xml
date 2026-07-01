@@ -24,6 +24,8 @@
         <sonar.coverage.jacoco.xmlReportPaths>
             ${project.build.directory}/site/jacoco/jacoco.xml
         </sonar.coverage.jacoco.xmlReportPaths>
+        <!-- La clase main de arranque no tiene lógica testeable: se excluye del análisis. -->
+        <sonar.coverage.exclusions>**/Application.java</sonar.coverage.exclusions>
     </properties>
 
     <dependencies>

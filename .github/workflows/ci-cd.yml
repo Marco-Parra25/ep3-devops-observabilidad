@@ -47,39 +47,18 @@ jobs:
           path: target/site/jacoco/
 
   # ============================================================
-  # JOB 2: Análisis de calidad y seguridad
+  # JOB 2: Análisis de seguridad (Trivy)
+  # La calidad de código la analiza SonarCloud con Análisis Automático,
+  # que publica el check "SonarCloud Code Analysis" y es requerido por
+  # la protección de rama (IE5). Aquí cubrimos el escaneo de vulnerabilidades.
   # ============================================================
-  quality-gate:
-    name: SonarQube + Seguridad
+  security-scan:
+    name: Análisis de seguridad (Trivy)
     runs-on: ubuntu-latest
     needs: build-test           # solo corre si build-test pasó
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configurar JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Análisis con SonarQube / SonarCloud (IE5)
-        # Requiere los secretos SONAR_TOKEN y SONAR_HOST_URL configurados en GitHub.
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: |
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "::warning:: SONAR_TOKEN no configurado; se omite el análisis Sonar."
-            exit 0
-          fi
-          mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=observability-service-ep3 \
-            -Dsonar.host.url="$SONAR_HOST_URL" \
-            -Dsonar.token="$SONAR_TOKEN"
 
       - name: Escaneo de vulnerabilidades del sistema de archivos (Trivy)
         # Detiene el pipeline si hay vulnerabilidades CRÍTICAS o ALTAS (IE6).
@@ -98,7 +77,7 @@ jobs:
   docker-build:
     name: Construir y publicar imagen
     runs-on: ubuntu-latest
-    needs: quality-gate
+    needs: security-scan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
       REGISTRY: ghcr.io
