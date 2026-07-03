@@ -6,10 +6,10 @@ Microservicio de inventario con un pipeline DevOps completo que integra **monito
 
 ## 👥 Integrantes
 
-| Nombre | Rol / aportes |
-|--------|---------------|
-| _(completar)_ | _(completar)_ |
-| _(completar)_ | _(completar)_ |
+| Nombre          | Rol / aportes     |
+|-----------------|-------------------|
+| _Marco Parra    | _(Desarrollador)_ |
+| _Luis Inostroza | _(Desarrollador)_ |
 
 ## 🔗 Enlaces del proyecto
 
