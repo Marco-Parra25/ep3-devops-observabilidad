@@ -6,10 +6,10 @@ Microservicio de inventario con un pipeline DevOps completo que integra **monito
 
 ## 👥 Integrantes
 
-| Nombre | Rol / aportes |
-|--------|---------------|
-| Marco Parra | Desarrollo principal del microservicio y configuración inicial. |
-| Luis Inostroza | Revisión, documentación, estandarización de código y validación. |
+| Nombre          | Rol / aportes     |
+|-----------------|-------------------|
+| _Marco Parra    | _(Desarrollador)_ |
+| _Luis Inostroza | _(Desarrollador)_ |
 
 ## 🔗 Enlaces del proyecto
 
