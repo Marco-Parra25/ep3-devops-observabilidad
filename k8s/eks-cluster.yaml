@@ -9,7 +9,7 @@ metadata:
 
 iam:
   # Rol de servicio del plano de control del cluster (existente).
-  serviceRoleARN: arn:aws:iam::654654493647:role/LabRole
+  serviceRoleARN: arn:aws:iam::081611519281:role/LabRole
   # Learner Lab no permite crear el proveedor OIDC.
   withOIDC: false
 
@@ -22,4 +22,4 @@ managedNodeGroups:
     volumeSize: 20
     iam:
       # Rol de los nodos worker (existente).
-      instanceRoleARN: arn:aws:iam::654654493647:role/LabRole
+      instanceRoleARN: arn:aws:iam::081611519281:role/LabRole

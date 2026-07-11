@@ -156,8 +156,10 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
       AWS_REGION: us-east-1
-      ACCOUNT_ID: "654654493647"
-      CLUSTER: ep3-cluster
+      ACCOUNT_ID: "081611519281"
+      # En esta sesión del Learner Lab se reutiliza el cluster compartido;
+      # k8s/eks-cluster.yaml permite crear uno dedicado (ep3-cluster) si se prefiere.
+      CLUSTER: tienda-cluster
       ECR_REPO: ep3-observability
       NAMESPACE: devops-ep3
     steps:

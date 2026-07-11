@@ -24,7 +24,7 @@ spec:
       containers:
         - name: observability-service
           # Imagen publicada en Amazon ECR (misma cuenta del cluster).
-          image: 654654493647.dkr.ecr.us-east-1.amazonaws.com/ep3-observability:latest
+          image: 081611519281.dkr.ecr.us-east-1.amazonaws.com/ep3-observability:latest
           ports:
             - containerPort: 8080
           volumeMounts:
