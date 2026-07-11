@@ -15,7 +15,7 @@ Microservicio de inventario con un pipeline DevOps completo que integra **monito
 
 - **Repositorio:** https://github.com/Marco-Parra25/ep3-devops-observabilidad
 - **Análisis de calidad (SonarCloud):** https://sonarcloud.io/dashboard?id=Marco-Parra25_ep3-devops-observabilidad
-- **Imagen de contenedor (ECR):** `654654493647.dkr.ecr.us-east-1.amazonaws.com/ep3-observability:latest`
+- **Imagen de contenedor (ECR):** `081611519281.dkr.ecr.us-east-1.amazonaws.com/ep3-observability:latest`
 
 ---
 
