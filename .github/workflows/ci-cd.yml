@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0   # historial completo, necesario para SonarQube
 
@@ -58,7 +58,7 @@ jobs:
     needs: build-test           # solo corre si build-test pasó
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Escaneo de vulnerabilidades del sistema de archivos (Trivy)
         # Detiene el pipeline si hay vulnerabilidades CRÍTICAS o ALTAS (IE6).
@@ -81,7 +81,7 @@ jobs:
     needs: security-scan
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Construir la imagen de la aplicación
         run: docker build -t ep3-app:test .
@@ -124,7 +124,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Login a GHCR
         uses: docker/login-action@v3
@@ -164,7 +164,7 @@ jobs:
       NAMESPACE: devops-ep3
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Login a Amazon ECR
         run: |
