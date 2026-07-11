@@ -71,7 +71,77 @@ jobs:
           ignore-unfixed: true
 
   # ============================================================
-  # JOB 3: Despliegue automático (CD) en AWS EKS
+  # JOB 3: Pruebas de aceptación (smoke test sobre el contenedor)
+  # Levanta la imagen real y valida los endpoints. Debe pasar ANTES
+  # de permitir el despliegue a producción (IE13).
+  # ============================================================
+  acceptance-test:
+    name: Pruebas de aceptación
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Construir la imagen de la aplicación
+        run: docker build -t ep3-app:test .
+
+      - name: Levantar el contenedor
+        run: docker run -d --name ep3-app -p 8080:8080 ep3-app:test
+
+      - name: Esperar a que la aplicación esté saludable
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo "✅ Aplicación saludable"; exit 0
+            fi
+            sleep 3
+          done
+          echo "❌ La aplicación no quedó saludable a tiempo"; docker logs ep3-app; exit 1
+
+      - name: Verificar endpoints clave (criterios de aceptación)
+        run: |
+          curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"'
+          curl -sf http://localhost:8080/actuator/prometheus | grep -q 'jvm_memory_used_bytes'
+          echo "✅ Endpoints de salud y métricas OK"
+
+      - name: Detener el contenedor
+        if: always()
+        run: docker rm -f ep3-app || true
+
+  # ============================================================
+  # JOB 4: Publicación de la imagen en GHCR (registro público)
+  # Equivalente a Docker Hub. Solo se publica si TODO lo anterior
+  # pasó, incluidas las pruebas de aceptación (IE7).
+  # ============================================================
+  publish-image:
+    name: Publicar imagen en GHCR
+    runs-on: ubuntu-latest
+    needs: acceptance-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y publicar la imagen
+        run: |
+          IMAGE=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+
+  # ============================================================
+  # JOB 5: Despliegue automático (CD) en AWS EKS
   # Solo se ejecuta al fusionar a main y si TODO lo anterior pasó.
   # Construye la imagen, la publica en Amazon ECR y actualiza el
   # despliegue en el cluster EKS de forma automática.
@@ -79,7 +149,7 @@ jobs:
   deploy-eks:
     name: Desplegar en AWS EKS
     runs-on: ubuntu-latest
-    needs: security-scan
+    needs: [acceptance-test, publish-image]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
