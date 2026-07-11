@@ -1,0 +1,88 @@
+# ============================================================================
+# Istio — malla de servicios (service mesh) para observability-service (IE12)
+# ----------------------------------------------------------------------------
+# Istio gestiona la RED y las MÉTRICAS de los servicios:
+#   - Gateway + VirtualService: entrada de tráfico y enrutamiento.
+#   - DestinationRule: balanceo de carga y detección de fallos (outlier).
+#   - PeerAuthentication: mTLS estricto entre servicios (seguridad).
+# Al inyectar el sidecar Envoy, Istio expone automáticamente métricas de
+# tráfico (latencia, tasa de errores, RPS) hacia Prometheus/Grafana/Kiali.
+#
+# Requisitos: Istio instalado en el cluster y el namespace etiquetado con
+#   istio-injection=enabled  (ver README.md de esta carpeta).
+# ============================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: observability-gateway
+  namespace: devops-ep3
+spec:
+  selector:
+    istio: ingressgateway          # usa el ingress gateway de Istio
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: observability-vs
+  namespace: devops-ep3
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - observability-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: observability-service   # Service de Kubernetes
+            port:
+              number: 80
+      # Reintentos automáticos ante fallos transitorios (resiliencia de red).
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: 5xx,connect-failure,refused-stream
+      timeout: 10s
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: observability-dr
+  namespace: devops-ep3
+spec:
+  host: observability-service
+  trafficPolicy:
+    # Balanceo de carga entre las 2 réplicas.
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 64
+        maxRequestsPerConnection: 10
+    # Circuit breaker: expulsa réplicas que devuelvan 5xx repetidos.
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: devops-ep3
+spec:
+  # mTLS estricto: todo el tráfico entre servicios va cifrado (seguridad - IE8).
+  mtls:
+    mode: STRICT

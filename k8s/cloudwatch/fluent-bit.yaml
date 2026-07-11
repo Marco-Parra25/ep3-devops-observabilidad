@@ -1,0 +1,134 @@
+# ============================================================================
+# AWS CloudWatch — Logging centralizado con Fluent Bit (IE12 / IE11)
+# ----------------------------------------------------------------------------
+# Fluent Bit corre como DaemonSet (un pod por nodo), lee los logs de todos los
+# contenedores del cluster y los envía a Amazon CloudWatch Logs, donde se
+# pueden consultar, filtrar y crear alarmas/métricas.
+# El grupo de logs queda en: /aws/eks/ep3-cluster/application
+#
+# Requisitos: los nodos usan LabRole, que tiene permisos de CloudWatch Logs.
+# Aplicar con:  kubectl apply -f k8s/cloudwatch/fluent-bit.yaml
+# ============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: amazon-cloudwatch
+  labels:
+    name: amazon-cloudwatch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluent-bit
+  namespace: amazon-cloudwatch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluent-bit-role
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "pods", "pods/logs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluent-bit-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluent-bit-role
+subjects:
+  - kind: ServiceAccount
+    name: fluent-bit
+    namespace: amazon-cloudwatch
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: amazon-cloudwatch
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush            5
+        Log_Level        info
+        Daemon           off
+        Parsers_File     parsers.conf
+
+    [INPUT]
+        Name             tail
+        Tag              application.*
+        Path             /var/log/containers/*.log
+        multiline.parser docker, cri
+        Mem_Buf_Limit    50MB
+        Skip_Long_Lines  On
+
+    [OUTPUT]
+        Name             cloudwatch_logs
+        Match            application.*
+        region           us-east-1
+        log_group_name   /aws/eks/ep3-cluster/application
+        log_stream_prefix ${HOSTNAME}-
+        auto_create_group true
+  parsers.conf: |
+    [PARSER]
+        Name   docker
+        Format json
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: amazon-cloudwatch
+  labels:
+    k8s-app: fluent-bit
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluent-bit
+  template:
+    metadata:
+      labels:
+        k8s-app: fluent-bit
+    spec:
+      serviceAccountName: fluent-bit
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: fluent-bit
+          image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          volumeMounts:
+            - name: config
+              mountPath: /fluent-bit/etc/
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: fluent-bit-config
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+      tolerations:
+        - operator: Exists
