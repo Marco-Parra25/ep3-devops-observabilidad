@@ -13,7 +13,7 @@ RUN mvn -B clean package -DskipTests
 
 # ---------- Etapa 2: ejecución ----------
 # Imagen final liviana, solo con el JRE. Menor superficie de ataque (seguridad).
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 WORKDIR /app
 
 # Usuario no-root con UID fijo 1001 (coincide con runAsUser del despliegue en K8s).

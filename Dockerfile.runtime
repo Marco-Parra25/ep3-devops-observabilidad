@@ -1,6 +1,6 @@
 # Imagen runtime liviana a partir de un JAR ya compilado.
 # Se usa para publicar en ECR compilando para linux/amd64 (nodos EKS).
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 WORKDIR /app
 # UID fijo 1001 para que Kubernetes valide runAsNonRoot de forma determinista.
 RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
